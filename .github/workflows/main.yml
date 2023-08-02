@@ -6,20 +6,6 @@ env:
   UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
 
 jobs:
-  setupUnity:
-    name: Set up Unity 🛠️
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      # Set up Unity with Unity Hub or Unity CLI (adjust to your preference)
-      - name: Set up Unity
-        uses: game-ci/setup-unity@v1
-        with:
-          unity-version: 2021.3.18f1  # Update to your desired Unity version
-          modules: 'unity,publishing'  # Add any other required modules
-
   buildAndroid:
     name: Build for Android 📱
     runs-on: ubuntu-latest
@@ -27,46 +13,31 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      # Set up Unity (similar to the previous job)
-      - name: Set up Unity
-        uses: game-ci/setup-unity@v1
-        with:
-          unity-version: 2021.3.18f1  # Update to your desired Unity version
-          modules: 'unity,publishing'
+      - name: Set up Unity License
+        run: echo "${{ env.UNITY_LICENSE }}" > UnityLicense.ulf
 
-      - name: Create LFS file list
-        run: git lfs ls-files -l | cut -d' ' -f1 | sort > .lfs-assets-id
-
-      - name: Restore LFS cache
-        uses: actions/cache@v2
-        id: lfs-cache
-        with:
-          path: .git/lfs
-          key: ${{ runner.os }}-lfs-${{ hashFiles('.lfs-assets-id') }}
-
-      - name: Git LFS Pull
+      - name: Install Git LFS
         run: |
-          git lfs pull
-          git add .
-          git reset --hard
+          sudo apt-get update
+          sudo apt-get install -y git-lfs
+          git lfs install
 
-      - name: Restore Library cache
-        uses: actions/cache@v2
-        with:
-          path: Library
-          key: Library-build-Android
-          restore-keys: |
-            Library-build-
-            Library-
+      - name: Pull LFS files
+        run: git lfs pull
 
-      - name: Build Android
+      - name: Build Android APK
         run: |
-          mkdir -p build/Android
-          Unity -projectPath "." -batchmode -nographics -executeMethod BuildScript.BuildAndroid -quit
-          mv Build/buildName/Android build/Android
+          mkdir -p Build/Android
+          # Replace 'BuildScript' with the actual class name that performs the Android build in your Unity project
+          # Replace 'MyAndroidBuild.apk' with the desired APK filename
+          # Replace 'Scene1', 'Scene2', etc. with the names of the scenes you want to include in the build
+          Unity -batchmode -nographics -quit -projectPath . -executeMethod BuildScript.BuildAndroid -logFile unity.log
+          mv ./unity.log ./Build/Android/unity.log
+          mv ./MyAndroidBuild.apk ./Build/Android/
 
-      - uses: actions/upload-artifact@v2
+      - name: Upload Android APK
+        uses: actions/upload-artifact@v2
         with:
-          name: build-Android
-          path: build/Android
+          name: Android APK
+          path: Build/Android/
 
