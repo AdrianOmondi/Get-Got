@@ -1,46 +1,36 @@
+name: Build Android APK
+
 on:
   push:
-    # Add other triggers if needed
-
-env:
-  UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+    branches:
+      - main  # Replace with your main branch name
+  pull_request:
+    branches:
+      - main  # Replace with your main branch name
 
 jobs:
   buildAndroid:
     name: Build for Android 📱
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Set up Unity
-        uses: unity-actions/setup-unity@v1
+      - uses: actions/checkout@v3
         with:
-          unityVersion: 2021.3.18f1  # Replace with the Unity version you want to use
-          modules: android
-
-      - name: Install Git LFS
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y git-lfs
-          git lfs install
-
-      - name: Pull LFS files
-        run: git lfs pull
-
-      - name: Build Android APK
-        run: |
-          mkdir -p Build/Android
-          # Replace 'BuildScript' with the actual class name that performs the Android build in your Unity project
-          # Replace 'MyAndroidBuild.apk' with the desired APK filename
-          # Replace 'Scene1', 'Scene2', etc. with the names of the scenes you want to include in the build
-          Unity -batchmode -nographics -quit -projectPath . -executeMethod BuildScript.BuildAndroid -logFile unity.log
-          mv ./unity.log ./Build/Android/unity.log
-          mv ./MyAndroidBuild.apk ./Build/Android/
-
-      - name: Upload Android APK
-        uses: actions/upload-artifact@v2
+          fetch-depth: 0
+          lfs: true
+      - uses: actions/cache@v2
         with:
-          name: Android APK
-          path: Build/Android/
+          path: Library
+          key: Library-Android
+          restore-keys: Library-
+      - uses: jlumbroso/free-disk-space@v1.2.0
+      - uses: game-ci/unity-builder@v2
+        with:
+          targetPlatform: Android
+          androidExportType: 'androidAppBundle'  # Use 'androidPackage' for APK instead of AAB
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+      - uses: actions/upload-artifact@v2
+        with:
+          name: Android-Build
+          path: build/Android
 
