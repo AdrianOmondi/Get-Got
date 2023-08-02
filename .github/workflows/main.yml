@@ -26,7 +26,7 @@ jobs:
       - uses: game-ci/unity-builder@v2
         with:
           targetPlatform: Android
-          androidExportType: 'androidAppBundle'  # Use 'androidPackage' for APK instead of AAB
+          androidExportType: 'androidPackage'  # Use 'androidPackage' for APK
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
       - uses: actions/upload-artifact@v2
