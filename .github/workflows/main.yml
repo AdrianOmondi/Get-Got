@@ -1,3 +1,4 @@
+
 name: Build Android APK
 
 on:
@@ -21,9 +22,10 @@ jobs:
         with:
           fetch-depth: 0
           lfs: true
+          uses: actions/cache@v3
 
       - name: Set up Unity Environment
-        uses: game-ci/unity-actions/setup-unity@v2
+        uses: game-ci/unity-actions/setup-unity@v1
         with:
           unityVersion: 2021.3.18f1
 
@@ -37,7 +39,7 @@ jobs:
           targetPlatform: Android
 
       - name: Upload APK artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: Android-APK
           path: build/Android/Android.apk
