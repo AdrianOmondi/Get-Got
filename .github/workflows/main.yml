@@ -1,23 +1,20 @@
-name: Build Android APK
+ name: Build project
 
-on:
-  workflow_dispatch: {}
+on: [push, pull_request]
 
 jobs:
-  buildAndroidAPK:
-    name: Build Android APK
+  buildForAllSupportedPlatforms:
+    name: Build for ${{ matrix.targetPlatform }}
     runs-on: ubuntu-latest
-    outputs:
-      versions: ${{ steps.buildMatrix.outputs.versions }}
+    strategy:
+      fail-fast: false
+      matrix:
+        targetPlatform:
+          
+          - Android # Build an Android .apk standalone app.
+        
     steps:
-      - name: Build matrix for latest patch version
-        id: buildMatrix
-        run: |
-          # Latest patch versions as json array of strings.
-          VERSIONS=`npx unity-changeset list --versions --latest-patch --json --min 2019.3`
-          echo "Versions: $VERSIONS"
-          echo "::set-output name=versions::$VERSIONS"
-
+    steps:
       - name: Checkout code
         uses: actions/checkout@v2
 
@@ -39,47 +36,18 @@ jobs:
 
       - name: Restore Library cache
         uses: actions/cache@v2
-        id: lib-cache
         with:
-          path: test-projects/${{ matrix.projectPath }}/Library
-          key: Library-Experiment-Build-${{ matrix.projectPath }}-${{ matrix.unityVersion }}-${{ matrix.targetPlatform }}
+          path: Library
+          key: Library-build-Android
           restore-keys: |
-            Library-Experiment-Build-${{ matrix.projectPath }}-${{ matrix.unityVersion }}-
+            Library-build-
+            Library-
 
-      - name: Build Android APK
-        id: build-1
-        continue-on-error: true
-        timeout-minutes: 40
-        uses: game-ci/unity-builder@4e7125603b7544961022d5a1fd09094b00918abd
-        env:
-          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+      - uses: game-ci/unity-builder@v2
         with:
-          projectPath: test-projects/${{ matrix.projectPath }}
           targetPlatform: Android
-          unityVersion: ${{ matrix.unityVersion }}
-          unityVersion: ["2021.1.7f1"]
 
-      - name: Clean and sleep for retry
-        if: steps.build-1.outcome == 'failure'
-        run: |
-          git add .
-          git reset --hard
-          sleep 120
-
-      - name: Build Android APK (Retry)
-        if: steps.build-1.outcome == 'failure'
-        timeout-minutes: 40
-        uses: game-ci/unity-builder@4e7125603b7544961022d5a1fd09094b00918abd
-        env:
-          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+      - uses: actions/upload-artifact@v2
         with:
-          projectPath: test-projects/${{ matrix.projectPath }}
-          targetPlatform: Android
-          unityVersion: ${{ matrix.unityVersion }}
-
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: Build-Android-APK-${{ matrix.unityVersion }}
-          path: build/test-projects/${{ matrix.projectPath }}/build/Android/Android.apk
-
+          name: build-Android
+          path: build/Android
