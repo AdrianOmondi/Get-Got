@@ -1,36 +1,45 @@
+
 name: Build Android APK
 
 on:
   push:
     branches:
-      - main  # Replace with your main branch name
+      - main  # Change this to your main branch name
   pull_request:
-    branches:
-      - main  # Replace with your main branch name
 
 jobs:
-  buildAndroid:
-    name: Build for Android 📱
+  buildAndroidAPK:
+    name: Build Android APK
     runs-on: ubuntu-latest
+
+    env:
+      UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+      UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+      UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+    
     steps:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
           lfs: true
-      - uses: actions/cache@v2
+
+      - name: Set up Unity Environment
+        uses: game-ci/unity-actions/setup-unity@v1
         with:
-          path: Library
-          key: Library-Android
-          restore-keys: Library-
-      - uses: jlumbroso/free-disk-space@v1.2.0
-      - uses: game-ci/unity-builder@v2
-        with:
-          targetPlatform: Android
-          androidExportType: 'androidPackage'  # Use 'androidPackage' for APK
+          unityVersion: 2021.3.18f1
+
+      - name: Build Android APK
+        uses: game-ci/unity-builder@v2
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
-      - uses: actions/upload-artifact@v2
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
         with:
-          name: Android-Build
-          path: build/Android
+          targetPlatform: Android
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: Android-APK
+          path: build/Android/Android.apk
 
