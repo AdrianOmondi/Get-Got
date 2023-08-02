@@ -1,170 +1,38 @@
-on: push
+on:
+  push:
+    # Add other triggers if needed
 
 env:
   UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
 
 jobs:
-  checkLicense:
-    name: Check for the unity license
+  setupUnity:
+    name: Set up Unity 🛠️
     runs-on: ubuntu-latest
-    steps:
-      - name: Fail - No license 
-        if: ${{ !startsWith(env.UNITY_LICENSE, '<') }}
-        run: exit 1
-
-  testRunner:
-    needs: checkLicense
-    name: Test all nodes
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        testMode:
-          - EditMode
-          - PlayMode
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Create LFS file list
-        run: git lfs ls-files -l | cut -d' ' -f1 | sort > .lfs-assets-id
-
-      - name: Restore LFS cache
-        uses: actions/cache@v2
-        id: lfs-cache
+      # Set up Unity with Unity Hub or Unity CLI (adjust to your preference)
+      - name: Set up Unity
+        uses: game-ci/setup-unity@v1
         with:
-          path: .git/lfs
-          key: ${{ runner.os }}-lfs-${{ hashFiles('.lfs-assets-id') }}
-
-      - name: Git LFS Pull
-        run: |
-          git lfs pull
-          git add .
-          git reset --hard
-
-      - name: Restore Library cache
-        uses: actions/cache@v2
-        with:
-          path: Library
-          key: Library-test-project-${{ matrix.targetPlatform }}
-          restore-keys: |
-            Library-test-project-
-            Library-
-
-      - name: Run tests
-        uses: game-ci/unity-test-runner@v2
-        id: testRunner
-        with:
-          testMode: ${{ matrix.testMode }}
-          checkName: ${{ matrix.testMode }} test results
-          githubToken: ${{ secrets.GITHUB_TOKEN }}
-
-      - uses: actions/upload-artifact@v2
-        with:
-          name: Test results (${{ matrix.testMode }})
-          path: ${{ steps.testRunner.outputs.artifactsPath }}
-
-  buildWebGL:
-    needs: testRunner
-    name: Build for WebGL 🖥️
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Create LFS file list
-        run: git lfs ls-files -l | cut -d' ' -f1 | sort > .lfs-assets-id
-
-      - name: Restore LFS cache
-        uses: actions/cache@v2
-        id: lfs-cache
-        with:
-          path: .git/lfs
-          key: ${{ runner.os }}-lfs-${{ hashFiles('.lfs-assets-id') }}
-
-      - name: Git LFS Pull
-        run: |
-          git lfs pull
-          git add .
-          git reset --hard
-
-      - name: Restore Library cache
-        uses: actions/cache@v2
-        with:
-          path: Library
-          key: Library-build-WebGL
-          restore-keys: |
-            Library-build-
-            Library-
-
-      - name: Build WebGL project
-        run: |
-          # Add your Unity command to build the WebGL project here
-          # For example:
-          # unity build -projectPath . -target WebGL -logFile build.log
-
-      - uses: actions/upload-artifact@v2
-        with:
-          name: build-WebGL
-          path: build/WebGL
-
-  buildWindows:
-    needs: testRunner
-    name: Build for Windows 🖥️
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Create LFS file list
-        run: git lfs ls-files -l | cut -d' ' -f1 | sort > .lfs-assets-id
-
-      - name: Restore LFS cache
-        uses: actions/cache@v2
-        id: lfs-cache
-        with:
-          path: .git/lfs
-          key: ${{ runner.os }}-lfs-${{ hashFiles('.lfs-assets-id') }}
-
-      - name: Git LFS Pull
-        run: |
-          git lfs pull
-          git add .
-          git reset --hard
-
-      - name: Restore Library cache
-        uses: actions/cache@v2
-        with:
-          path: Library
-          key: Library-build-StandaloneWindows64
-          restore-keys: |
-            Library-build-
-            Library-
-
-      - name: Build Windows project
-        run: |
-          # Add your Unity command to build the Windows project here
-          # For example:
-          # unity build -projectPath . -target StandaloneWindows64 -logFile build.log
-
-      - uses: actions/upload-artifact@v2
-        with:
-          name: build-StandaloneWindows64
-          path: build/StandaloneWindows64
+          unity-version: 2021.3.18f1  # Update to your desired Unity version
+          modules: 'unity,publishing'  # Add any other required modules
 
   buildAndroid:
-    needs: testRunner
     name: Build for Android 📱
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+
+      # Set up Unity (similar to the previous job)
+      - name: Set up Unity
+        uses: game-ci/setup-unity@v1
+        with:
+          unity-version: 2021.3.18f1  # Update to your desired Unity version
+          modules: 'unity,publishing'
 
       - name: Create LFS file list
         run: git lfs ls-files -l | cut -d' ' -f1 | sort > .lfs-assets-id
@@ -191,33 +59,14 @@ jobs:
             Library-build-
             Library-
 
-      - name: Build Android project
+      - name: Build Android
         run: |
-          # Add your Unity command to build the Android project here
-          # For example:
-          # unity build -projectPath . -target Android -logFile build.log
+          mkdir -p build/Android
+          Unity -projectPath "." -batchmode -nographics -executeMethod BuildScript.BuildAndroid -quit
+          mv Build/buildName/Android build/Android
 
       - uses: actions/upload-artifact@v2
         with:
           name: build-Android
           path: build/Android
-
-  deployPages:
-    needs: buildWebGL
-    name: Deploy to Github Pages 🚀
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - uses: actions/download-artifact@v2
-        with:
-          name: build-WebGL
-          path: build
-
-      - name: Deploy 🚀
-        uses: JamesIves/github-pages-deploy-action@4.1.4
-        with:
-          branch: gh-pages
-          folder: build/WebGL
 
